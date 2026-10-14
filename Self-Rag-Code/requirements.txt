@@ -1,0 +1,12 @@
+langchain
+langchain-core
+langchain-community
+langchain-openai
+langchain-text-splitters
+langgraph
+openai
+pypdf
+pydantic
+python-dotenv
+tavily-python
+langchain-tavily
