@@ -8,6 +8,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.postgres import PostgresSaver
+from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 from tavily import TavilyClient
 
 from src.config import get_settings
@@ -309,10 +312,21 @@ def build_graph():
     g.add_edge("no_answer", "commit_memory")
     g.add_edge("commit_memory", END)
 
-    db_path = Path(__file__).resolve().parents[1] / "data" / "langgraph_memory.sqlite"
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path), check_same_thread=False)
-    checkpointer = SqliteSaver(conn)
+    database_url = get_settings().database_url
+    if database_url:
+        pool = ConnectionPool(
+            conninfo=database_url,
+            min_size=0,
+            max_size=4,
+            kwargs={"autocommit": True, "prepare_threshold": None, "row_factory": dict_row},
+        )
+        checkpointer = PostgresSaver(pool)
+        checkpointer.setup()
+    else:
+        db_path = Path(__file__).resolve().parents[1] / "data" / "langgraph_memory.sqlite"
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(db_path), check_same_thread=False)
+        checkpointer = SqliteSaver(conn)
     return g.compile(checkpointer=checkpointer)
 
 

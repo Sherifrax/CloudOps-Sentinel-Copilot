@@ -16,7 +16,7 @@ During an incident, an engineer needs an actionable next step **and a reason to 
 - **Self-correction.** Relevance, answer support, and usefulness checks can trigger query rewrites or answer revision.
 - **Honest fallback.** Web results are labeled as external guidance; if evidence remains insufficient, the workflow declines to recommend an action.
 - **Incident continuity.** A stable `thread_id` restores LangGraph context for follow-ups such as “What should I check next?”
-- **Inspectability.** The UI exposes sources, route, support status, and the workflow decision trace; SQLite stores conversation and audit records.
+- **Inspectability.** The UI exposes sources, route, support status, and the workflow decision trace; persistent storage keeps conversation and audit records.
 
 ## How it works
 
@@ -25,7 +25,7 @@ During an incident, an engineer needs an actionable next step **and a reason to 
 3. **Search internal knowledge.** Pinecone retrieves runbook chunks using OpenAI embeddings. An LLM grades each chunk for relevance.
 4. **Correct weak retrieval.** If no useful internal material is found, the graph rewrites the search query and retries within configured limits. It then moves to Tavily web search when needed and grades those results too.
 5. **Verify the answer.** Generation uses the selected evidence. An `IsSUP` check tests grounding and can trigger revision; an `IsUSE` check tests whether the answer addresses the question and can trigger another retrieval path.
-6. **Persist the result.** The graph commits the exchange to its SQLite checkpoint. A separate SQLite audit store records the answer, route, sources, trace, and thread history for the UI.
+6. **Persist the result.** The graph commits the exchange to a checkpoint. A separate audit store records the answer, route, sources, trace, and thread history for the UI. Both stores use SQLite locally or hosted Postgres when `DATABASE_URL` is set.
 
 The diagram above shows the intended end-to-end architecture. The repository currently includes a Dockerfile for the API; deployment infrastructure shown in the diagram is architectural context rather than a deployment configuration in this repo.
 
@@ -36,7 +36,7 @@ The diagram above shows the intended end-to-end architecture. The repository cur
 | Self-RAG orchestration | LangGraph state machine with conditional routing, bounded rewrites, grounding revision, usefulness checks, and a safe no-evidence outcome |
 | Private knowledge pipeline | PDF, TXT, Markdown, and DOCX loading; chunking; OpenAI embeddings; Pinecone index and namespace management |
 | Shared retrieval configuration | Initial ingestion and live uploads use the same embedding model, index, namespace, and ingestion code |
-| Persistent investigations | LangGraph SQLite checkpoints plus a separate audit database for complete answers, sources, traces, and saved threads |
+| Persistent investigations | LangGraph checkpoints plus a separate audit database for complete answers, sources, traces, and saved threads; SQLite locally or Postgres on Vercel |
 | Command center | Next.js, React, TypeScript, and Tailwind interface for questions, source inspection, history, and knowledge uploads |
 | API and access control | FastAPI endpoints; bearer-token protection for uploads; file type and 10 MB size checks |
 
@@ -52,7 +52,7 @@ The diagram above shows the intended end-to-end architecture. The repository cur
 
 - **AI and retrieval:** LangGraph, LangChain, OpenAI `gpt-5-mini`, OpenAI `text-embedding-3-large`, Pinecone, Tavily
 - **Application:** FastAPI, Next.js, React, TypeScript, Tailwind CSS
-- **Persistence and packaging:** SQLite, Docker
+- **Persistence and packaging:** SQLite, Postgres, Docker
 
 The default embedding dimension is **3072**. The default Pinecone index is `cloudops-sentinel-openai-self-rag`, with namespace `incident-runbooks`.
 
@@ -64,7 +64,7 @@ data_ingestion.py              One-command initial knowledge ingestion
 src/self_rag.py                LangGraph workflow, graders, routing, and checkpointing
 src/ingestion.py               Document loading, splitting, and stable chunk IDs
 src/vectorstore.py             Shared embeddings and Pinecone configuration
-src/db.py                      SQLite audit and saved-thread queries
+src/db.py                      SQLite/Postgres audit and saved-thread queries
 frontend/                     Next.js incident command center and API proxy
 documents/                    Example operational runbooks and rollback SOP
 tests/                        Chat-history and upload-security checks
@@ -104,4 +104,4 @@ Open **http://localhost:3000**. On Windows, activate the environment with `.venv
 
 ## Scope and next steps
 
-SQLite is appropriate for this local demonstration and makes thread persistence easy to inspect. A production deployment would need a managed checkpointer and database, stronger identity and role-based access, operational telemetry, and evaluation against a representative incident set. The LLM-based grading steps are safeguards, not guarantees of correctness; engineers should verify actions against the cited runbook and their live environment.
+SQLite makes local thread persistence easy to inspect. On Vercel, set `DATABASE_URL` to hosted Postgres so LangGraph checkpoints and audit history survive function restarts; uploaded files are processed from temporary storage and indexed in Pinecone. A public deployment also needs stronger identity and access controls, operational telemetry, and evaluation against a representative incident set. The LLM-based grading steps are safeguards, not guarantees of correctness; engineers should verify actions against the cited runbook and their live environment.

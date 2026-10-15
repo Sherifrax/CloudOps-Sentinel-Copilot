@@ -32,6 +32,7 @@ class Settings(BaseModel):
     max_retrieval_rewrites: int = int(os.getenv("MAX_RETRIEVAL_REWRITES", "2"))
     max_web_rewrites: int = int(os.getenv("MAX_WEB_REWRITES", "2"))
     database_path: str = os.getenv("DATABASE_PATH", "data/audit.db")
+    database_url: str = os.getenv("DATABASE_URL", "") or os.getenv("POSTGRES_URL", "")
 
     @property
     def database_file(self) -> Path:

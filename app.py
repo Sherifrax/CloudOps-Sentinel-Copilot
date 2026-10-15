@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from .env file
 
 ROOT = Path(__file__).resolve().parent
-UPLOADS = ROOT / "uploads"
+UPLOADS = (Path(tempfile.gettempdir()) / "cloudops-uploads") if os.getenv("VERCEL") else (ROOT / "uploads")
 UPLOADS.mkdir(exist_ok=True)
 
 
@@ -112,6 +112,9 @@ async def upload(file: UploadFile = File(...)):
         return UploadResponse(filename=safe_name, chunks_indexed=count, namespace=namespace())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.getenv("VERCEL"):
+            target.unlink(missing_ok=True)
 
 
 @app.get("/api/audits")
