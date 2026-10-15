@@ -15,14 +15,16 @@ CloudOps Sentinel is an evidence-led incident response copilot. The Next.js fron
 
 Only PDF, TXT, MD, and DOCX files up to 10 MB are accepted. Rotate the key in `.env` if it is shared or exposed.
 
-The frontend proxies `/api/chat`, `/api/upload`, `/api/health`, and `/api/audits` to `http://127.0.0.1:8080`. Set `CLOUDOPS_API_URL` in `frontend/.env.local` if the Python service runs elsewhere. API credentials stay in the root `.env` and are never exposed to the browser.
+The frontend proxies `/api/chat`, `/api/upload`, `/api/health`, `/api/audits`, `/api/threads`, and `/api/history` to `http://127.0.0.1:8080`. Set `CLOUDOPS_API_URL` in `frontend/.env.local` if the Python service runs elsewhere. API credentials stay in the root `.env` and are never exposed to the browser.
 
 ## Interface
 
 - Ask an incident question or choose a sample investigation.
 - Expand the answer's decision trace and inspect its evidence sources.
-- Start a new conversation session; the active thread ID is kept in the browser.
+- Reopen saved conversations after closing or refreshing the browser. Complete responses, sources, and decision traces are stored in the server audit database; the browser keeps only the active thread ID.
 - Upload approved PDF, TXT, MD, or DOCX documents to the existing Pinecone knowledge base with the administrator key.
-- View recent requests in the activity log.
+- Expand activity entries to read complete answers, sources, and traces, then open their full conversation where a saved thread exists.
+
+Existing audit rows created before this feature can be linked to their LangGraph checkpoints with `python scripts/backfill_legacy_threads.py --apply`. Only exact, unambiguous question and answer matches are linked. Unmatched rows remain readable in the activity log.
 
 The UI uses Next.js App Router, React, TypeScript, Tailwind CSS, Motion, and Lucide icons. Its topology scene is built with CSS depth and animation, so it remains lightweight and respects reduced-motion settings.

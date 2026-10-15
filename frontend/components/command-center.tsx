@@ -44,6 +44,7 @@ export function CommandCenter() {
   const [health, setHealth] = useState<"checking" | "online" | "offline">("checking");
   const [audits, setAudits] = useState<Audit[]>([]);
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  const [showAllSessions, setShowAllSessions] = useState(false);
   const [restoring, setRestoring] = useState(true);
   const [restoreError, setRestoreError] = useState("");
   const [activeAuditId, setActiveAuditId] = useState<number | null>(null);
@@ -123,8 +124,7 @@ export function CommandCenter() {
       let available: ThreadSummary[] = [];
       try { available = await loadThreads(); } catch { /* Retry remains available in the UI. */ }
       if (!active) return;
-      const id = saved && available.some(item => item.thread_id === saved)
-        ? saved : available[0]?.thread_id || saved || newThread();
+      const id = saved || available[0]?.thread_id || newThread();
       await restoreThread(id);
     })();
     fetch("/api/health", { cache: "no-store" })
@@ -241,8 +241,9 @@ export function CommandCenter() {
       <button className="side-action" onClick={() => { nav("knowledge"); setTimeout(() => adminInputRef.current?.focus(), 150); }}><UploadCloud size={17}/> Add document</button>
       {threads.length > 0 && <>
         <div className="sidebar-divider"/>
-        <div className="sidebar-section-label">SAVED SESSIONS</div>
-        <div className="recent-session-list">{threads.slice(0, 8).map(item => <button key={item.thread_id} className={threadId === item.thread_id ? "selected" : ""} onClick={() => openThread(item.thread_id)} disabled={busy} title={item.title}><MessageSquareText size={14}/><span>{item.title}</span><small>{item.turn_count}</small></button>)}</div>
+        <div className="session-section-heading"><span>SAVED SESSIONS</span><small>{threads.length}</small></div>
+        <div className="recent-session-list">{threads.slice(0, showAllSessions ? undefined : 4).map(item => <button key={item.thread_id} className={threadId === item.thread_id ? "selected" : ""} onClick={() => openThread(item.thread_id)} disabled={busy} title={item.title} aria-current={threadId === item.thread_id ? "page" : undefined}><MessageSquareText size={15}/><span className="session-item-copy"><strong>{item.title}</strong><small>{item.turn_count} {item.turn_count === 1 ? "turn" : "turns"}</small></span></button>)}</div>
+        {threads.length > 4 && <button className="session-show-all" onClick={() => setShowAllSessions(current => !current)} aria-expanded={showAllSessions}>{showAllSessions ? "Show fewer" : `View all ${threads.length} sessions`}<ChevronDown size={14}/></button>}
       </>}
       <div className="sidebar-spacer"/>
       <div className="system-card">
