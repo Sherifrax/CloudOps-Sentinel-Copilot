@@ -114,7 +114,7 @@ def commit_memory(state: RAGState):
     answer = state.get("answer", "")
     route = state.get("source_mode", "none")
     entry = f"User: {user_question}\nAssistant ({route}): {answer}"
-    return {"memory": [entry], "trace": _trace(state, "SQLite memory checkpoint updated")}
+    return {"memory": [entry], "trace": _trace(state, "Persistent memory checkpoint updated")}
 
 
 def decide_retrieval(state: RAGState):
